@@ -161,7 +161,7 @@ Parameters:
 
 ## 🎨 UI 디자인 출처
 
-이 프로젝트의 UI 디자인은 [Dribbble의 Cinepix](https://dribbble.com/shots/23058000-Cinepix-Movie-Streaming-Mobile-App)에서 영감을 받았습니다.
+이 프로젝트의 UI 디자인은 [Dribbble의 Cinepix]([https://dribbble.com/shots/23058000-Cinepix-Movie-Streaming-Mobile-App](https://dribbble.com/shots/25673169-Cinepix-Get-Started-Home-Series-detail))에서 영감을 받았습니다.
 
 **면책조항**:
 - 본 프로젝트는 **학습 목적**으로만 제작되었습니다.
