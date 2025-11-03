@@ -44,6 +44,9 @@ dependencies:
   # json 파일 관리
   json_annotation: ^4.9.0
 
+  # fontAwesome 아이콘
+  font_awesome_flutter: ^10.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

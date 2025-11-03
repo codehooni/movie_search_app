@@ -46,6 +46,13 @@ class MyMovieCard extends StatelessWidget {
                     _buildDivider(context),
 
                     _buildDetailText(context, movie.genreNames.first),
+
+                    _buildDivider(context),
+
+                    _buildDetailText(
+                      context,
+                      '★ ${movie.voteAverage.toStringAsFixed(1)}',
+                    ),
                   ],
                 ),
               ],

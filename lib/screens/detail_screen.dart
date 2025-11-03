@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
 import 'package:movie_demo/widgets/my_big_movie_card.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class DetailScreen extends StatelessWidget {
   final Movie movie;
@@ -57,7 +58,12 @@ class DetailScreen extends StatelessWidget {
                   // My Movie Card
                   MyBigMovieCard(movie: movie),
 
-                  SizedBox(height: mq.height * 0.02),
+                  SizedBox(height: mq.height * 0.01),
+
+                  // Buttons
+                  _buildButtons(context),
+
+                  SizedBox(height: mq.height * 0.04),
 
                   // Overview
                   _buildOverView(context),
@@ -81,6 +87,45 @@ class DetailScreen extends StatelessWidget {
           color: Theme.of(context).colorScheme.secondaryContainer.withAlpha(70),
         ),
         child: Icon(CupertinoIcons.back),
+      ),
+    );
+  }
+
+  Widget _buildButtons(BuildContext context) {
+    return Row(
+      children: [
+        _buildSmallButton(context, CupertinoIcons.heart),
+        SizedBox(width: 8.0),
+        _buildSmallButton(context, FontAwesomeIcons.download),
+        SizedBox(width: 8.0),
+        Expanded(child: _buildWatchButton(context)),
+      ],
+    );
+  }
+
+  Widget _buildSmallButton(BuildContext context, IconData iconData) {
+    return Container(
+      padding: EdgeInsets.all(10.0),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.secondaryContainer.withAlpha(180),
+      ),
+      child: Icon(iconData, size: 22.0),
+    );
+  }
+
+  Widget _buildWatchButton(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30.0),
+        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(180),
+      ),
+      child: Center(
+        child: Text(
+          'Watch Now!',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),
+        ),
       ),
     );
   }
