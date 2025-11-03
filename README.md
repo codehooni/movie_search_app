@@ -5,10 +5,12 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
 ## 📱 스크린샷
 
 ### 인기 영화 목록
-![인기 영화 목록](screenshots/home_screen.png)
+<img width="300" height="600" alt="home_screen" src="https://github.com/user-attachments/assets/57540f09-ffa7-453a-b3dc-0cf09db41477" />
+
 
 ### 영화 상세 페이지
-![영화 상세 페이지](screenshots/detail_screen.png)
+<img width="300" height="600" alt="detail_screen" src="https://github.com/user-attachments/assets/404d64a6-d120-4bad-9ce6-3c5d330b560e" />
+
 
 ## 주요 기능
 
