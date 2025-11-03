@@ -32,8 +32,21 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Center(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Search Bar
                 _buildSearchBar(),
+
+                SizedBox(height: 24.0),
+
+                // Popular
+                Text(
+                  '인기 영화',
+                  style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+                ),
+
+                SizedBox(height: 4.0),
+
                 Expanded(
                   child: FutureBuilder<List<Movie>>(
                     future: popularMovies,
@@ -95,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: TextField(
               controller: controller,
+              onChanged: (value) {},
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Search',
@@ -120,5 +134,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    controller.dispose();
   }
 }
