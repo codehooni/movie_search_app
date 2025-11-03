@@ -47,28 +47,35 @@ class DetailScreen extends StatelessWidget {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Back Button
-                  _buildBackButton(context),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: mq.height * 0.15),
 
-                  SizedBox(height: mq.height * 0.15),
+                    // My Movie Card
+                    MyBigMovieCard(movie: movie),
 
-                  // My Movie Card
-                  MyBigMovieCard(movie: movie),
+                    SizedBox(height: mq.height * 0.01),
 
-                  SizedBox(height: mq.height * 0.01),
+                    // Buttons
+                    _buildButtons(context),
 
-                  // Buttons
-                  _buildButtons(context),
+                    SizedBox(height: mq.height * 0.04),
 
-                  SizedBox(height: mq.height * 0.04),
-
-                  // Overview
-                  _buildOverView(context),
-                ],
+                    // Overview
+                    _buildOverView(context),
+                  ],
+                ),
               ),
+            ),
+          ),
+
+          // Back Button
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(top: 16.0, left: 16.0),
+              child: _buildBackButton(context),
             ),
           ),
         ],
@@ -141,7 +148,10 @@ class DetailScreen extends StatelessWidget {
 
         SizedBox(height: 8.0),
 
-        Text(movie.overview, style: TextStyle(fontSize: 15.0)),
+        Text(
+          movie.overview.isEmpty ? '줄거리 없음' : movie.overview,
+          style: TextStyle(fontSize: 15.0),
+        ),
       ],
     );
   }
