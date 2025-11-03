@@ -57,13 +57,16 @@ class MyBigMovieCard extends StatelessWidget {
   }
 
   Widget _buildImage(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadiusGeometry.circular(12.0),
-      child: Image.network(
-        'https://image.tmdb.org/t/p/w500${movie.posterPath}',
-        width: 105,
-        height: 150,
-        fit: BoxFit.cover,
+    return Hero(
+      tag: 'hero-movie-${movie.id}',
+      child: ClipRRect(
+        borderRadius: BorderRadiusGeometry.circular(12.0),
+        child: Image.network(
+          'https://image.tmdb.org/t/p/w500${movie.posterPath}',
+          width: 105,
+          height: 150,
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
