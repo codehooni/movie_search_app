@@ -56,6 +56,11 @@ class Movie {
       10749: '로맨스',
       10752: '전쟁',
     };
+
+    if (genreIds.isEmpty) {
+      return ['없음'];
+    }
+
     return genreIds.map((id) => genreMap[id] ?? '알수없음').toList();
   }
 

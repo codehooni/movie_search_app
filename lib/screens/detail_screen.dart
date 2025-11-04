@@ -17,11 +17,12 @@ class DetailScreen extends StatelessWidget {
       body: Stack(
         children: [
           // Background Image
-          Image.network(
-            'https://image.tmdb.org/t/p/w500${movie.posterPath}',
-            width: mq.width,
-            fit: BoxFit.cover,
-          ),
+          if (movie.posterPath != null)
+            Image.network(
+              'https://image.tmdb.org/t/p/w500${movie.posterPath}',
+              width: mq.width,
+              fit: BoxFit.cover,
+            ),
 
           // Gradient Overlay
           Positioned.fill(

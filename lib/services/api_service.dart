@@ -9,6 +9,7 @@ class APIService {
 
   final String? apiKey = dotenv.env['TMDB_API_KEY'];
 
+  // 인기 영화 불러오기
   Future<List<Movie>> getPopularMovies() async {
     try {
       final response = await _dio.get(
@@ -16,14 +17,35 @@ class APIService {
         queryParameters: {'api_key': apiKey, 'language': 'ko-KR'},
       );
 
-      log('영화 정보를 불러옴', name: 'Get Movies Api');
+      log('인기 영화 정보를 불러옴', name: 'Movie Api');
 
       final results = response.data['results'] as List;
 
-      log('${results.length}의 결과 변환 완료', name: 'Get Movies Api');
       return results.map((json) => Movie.fromJson(json)).toList();
     } catch (e) {
-      log('$e');
+      log('인기 영화 정보를 불러오는 중 오류 발생: $e');
+      rethrow;
+    }
+  }
+
+  // 검색된 영화 불러오기
+  Future<List<Movie>> getSearchedMovie(String query) async {
+    try {
+      final response = await _dio.get(
+        '/search/movie',
+        queryParameters: {
+          'query': query,
+          'api_key': apiKey,
+          'language': 'ko-KR',
+        },
+      );
+      log('검색된 영화 정보를 불러옴', name: 'Movie Api');
+
+      final result = response.data['results'] as List;
+
+      return result.map((json) => Movie.fromJson(json)).toList();
+    } catch (e) {
+      log('검색된 영화 정보를 불러오는 중 오류 발생: $e');
       rethrow;
     }
   }

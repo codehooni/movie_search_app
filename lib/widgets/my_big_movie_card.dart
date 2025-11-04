@@ -23,7 +23,6 @@ class MyBigMovieCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              mainAxisSize: MainAxisSize.max,
               children: [
                 // Type
                 _buildType(context),
@@ -61,12 +60,24 @@ class MyBigMovieCard extends StatelessWidget {
       tag: 'hero-movie-${movie.id}',
       child: ClipRRect(
         borderRadius: BorderRadiusGeometry.circular(12.0),
-        child: Image.network(
-          'https://image.tmdb.org/t/p/w500${movie.posterPath}',
-          width: 105,
-          height: 150,
-          fit: BoxFit.cover,
-        ),
+        child: movie.posterPath != null
+            ? Image.network(
+                'https://image.tmdb.org/t/p/w500${movie.posterPath}',
+                width: 105,
+                height: 150,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                width: 105,
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                ),
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+              ),
       ),
     );
   }
@@ -96,7 +107,7 @@ class MyBigMovieCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         movie.title,
-        overflow: TextOverflow.fade,
+        overflow: TextOverflow.ellipsis,
         maxLines: 2,
         style: TextStyle(
           color: Theme.of(context).colorScheme.primary,
