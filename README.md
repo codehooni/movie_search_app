@@ -10,10 +10,27 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
 
 ## 주요 기능
 
-- **인기 영화 목록**: TMDB API를 통해 현재 인기 있는 영화 목록을 가져와 표시
-- **영화 상세 정보**: 영화 카드를 탭하여 상세 정보 확인
-- **Hero 애니메이션**: 화면 전환 시 부드러운 이미지 애니메이션 효과
-- **검색 바 UI**: 영화 검색을 위한 UI (기능 구현 예정)
+### 🏠 홈 화면
+- **인기 영화 목록**: TMDB API를 통해 현재 인기 있는 영화 목록 표시
+- **실시간 검색**: Debounce를 적용한 영화 검색 기능 (500ms 지연)
+- **검색 모드 전환**: 인기 영화 ↔ 검색 결과 자동 전환
+- **Pull-to-Refresh**: 아래로 당겨서 영화 목록 새로고침
+- **에러 처리**: 네트워크 오류 감지 및 재시도 버튼 제공
+
+### 📄 상세 화면
+- **영화 상세 정보**: 제목, 개봉년도, 평점, 장르, 줄거리 표시
+- **즐겨찾기 기능**: 영화를 즐겨찾기에 추가/제거 (SharedPreferences 사용)
+- **Hero 애니메이션**: 화면 전환 시 부드러운 이미지 애니메이션
+- **실시간 상태 반영**: 즐겨찾기 추가/제거 즉시 UI 업데이트
+
+### ⭐ 즐겨찾기 화면
+- **로컬 저장소**: SharedPreferences를 통한 영구 데이터 저장
+- **장르 필터링**: 12개 장르별 영화 필터링 기능
+- **그리드 레이아웃**: 2열 그리드로 영화 포스터 표시
+- **자동 새로고침**: 상세 화면에서 돌아오면 목록 자동 업데이트
+
+### 🧭 내비게이션
+- **Bottom Navigation Bar**: Home과 Favorites 화면 간 빠른 전환
 
 ## 기술 스택
 
@@ -23,25 +40,31 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
 - **json_serializable**: JSON 직렬화/역직렬화
 - **flutter_dotenv**: 환경 변수 관리
 - **font_awesome_flutter**: FontAwesome 아이콘
+- **shared_preferences**: 로컬 데이터 저장
 
 ## 프로젝트 구조
 
 ```
 lib/
-├── main.dart                    # 앱 진입점
+├── main.dart                       # 앱 진입점
 ├── models/
-│   ├── movie.dart              # Movie 모델
-│   └── movie.g.dart            # 자동 생성된 JSON 직렬화 코드
+│   ├── movie.dart                 # Movie 모델 (장르 매핑 포함)
+│   └── movie.g.dart               # 자동 생성된 JSON 직렬화 코드
 ├── screens/
-│   ├── home_screen.dart        # 홈 화면 (인기 영화 목록)
-│   └── detail_screen.dart      # 상세 화면 (영화 상세 정보)
+│   ├── main_screen.dart           # 메인 화면 (Bottom Navigation)
+│   ├── home_screen.dart           # 홈 화면 (검색 + 인기 영화)
+│   ├── favorites_screen.dart      # 즐겨찾기 화면 (장르 필터링)
+│   └── detail_screen.dart         # 상세 화면 (영화 상세 정보)
 ├── widgets/
-│   ├── my_movie_card.dart      # 작은 영화 카드 위젯
-│   └── my_big_movie_card.dart  # 큰 영화 카드 위젯
+│   ├── my_movie_card.dart         # 작은 영화 카드 위젯
+│   └── my_big_movie_card.dart     # 큰 영화 카드 위젯
 ├── services/
-│   └── api_service.dart        # API 호출 서비스
+│   ├── api_service.dart           # API 호출 서비스 (인기/검색)
+│   └── favorites_service.dart     # 즐겨찾기 저장 서비스
+├── utils/
+│   └── debouncer.dart             # 검색 디바운서
 └── theme/
-    └── dark_mode.dart          # 다크모드 테마
+    └── dark_mode.dart             # 다크모드 테마
 ```
 
 ## 설치 및 실행
@@ -83,6 +106,7 @@ flutter run
 - `dio` (^5.9.0): HTTP 클라이언트 (REST API 호출)
 - `json_annotation` (^4.9.0): JSON 직렬화 어노테이션
 - `font_awesome_flutter` (^10.7.0): FontAwesome 아이콘
+- `shared_preferences` (^2.5.3): 로컬 데이터 영구 저장
 
 ### Dev Dependencies
 - `flutter_lints` (^5.0.0): 코드 품질 검사
@@ -91,31 +115,58 @@ flutter run
 
 ## 주요 학습 포인트
 
-### 1. FutureBuilder 사용
-- API 호출 결과를 비동기로 처리
-- 로딩, 에러, 데이터 상태 관리
-- `initState()`에서 Future 초기화하여 재호출 방지
+### 1. 검색 기능 + Debouncing
+검색 입력마다 API 호출을 방지하기 위해 Debouncer 구현
+```dart
+class Debouncer {
+  final Duration delay;
+  Timer? _timer;
 
+  void call(VoidCallback callback) {
+    _timer?.cancel();
+    _timer = Timer(delay, callback);
+  }
+}
+```
+
+### 2. Enum을 활용한 상태 관리
+검색 모드를 enum으로 관리하여 명확한 상태 구분
+```dart
+enum SearchMode { popular, searching }
+```
+
+### 3. SharedPreferences로 로컬 저장
+즐겨찾기 데이터를 JSON으로 변환하여 영구 저장
+```dart
+static Future<void> addFavorite(Movie movie) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<Movie> favorites = await getFavorites();
+  favorites.add(movie);
+
+  final jsonList = favorites.map((m) => jsonEncode(m.toJson())).toList();
+  await prefs.setStringList(_favoritesKey, jsonList);
+}
+```
+
+### 4. FutureBuilder 패턴
+API 호출 결과를 상태별로 처리 (waiting, error, data)
 ```dart
 FutureBuilder<List<Movie>>(
-  future: popularMovies,
+  future: moviesFuture,
   builder: (context, snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
-      return CircularProgressIndicator(); // 로딩
+      return CircularProgressIndicator();
     }
     if (snapshot.hasError) {
-      return Text('에러 발생'); // 에러
+      return ErrorWidget();
     }
-    return ListView(...); // 데이터
+    return ListView(...);
   },
 )
 ```
 
-### 2. Hero 애니메이션
-- 화면 전환 시 공유 요소 애니메이션
-- 같은 `tag`를 가진 위젯끼리 연결
-- 각 영화마다 고유한 tag 사용: `hero-movie-${movie.id}`
-
+### 5. Hero 애니메이션
+화면 전환 시 부드러운 공유 요소 애니메이션
 ```dart
 Hero(
   tag: 'hero-movie-${movie.id}',
@@ -123,21 +174,25 @@ Hero(
 )
 ```
 
-### 3. JSON 직렬화
-- `@JsonSerializable()` 어노테이션 사용
-- `@JsonKey(name: 'snake_case')` 필드명 매핑
-- Getter를 통한 데이터 변환 (`year`, `genreNames`)
+### 6. 장르 필터링
+Movie 모델에 장르 ID→이름 매핑 로직 구현
+```dart
+List<String> get genreNames {
+  const genreMap = {28: '액션', 35: '코미디', ...};
+  return genreIds.map((id) => genreMap[id] ?? '알수없음').toList();
+}
+```
 
-### 4. TMDB 이미지 URL 구성
-- 기본 URL: `https://image.tmdb.org/t/p/`
-- 크기 옵션: `w500` (width 500px)
-- 경로: `${movie.posterPath}` (API에서 제공)
-
-### 5. Flutter 레이아웃
-- `Column` + `Expanded`: 남은 공간 채우기
-- `ListView.builder`: 효율적인 리스트 렌더링
-- `GestureDetector`: 터치 이벤트 처리
-- `Navigator.push`: 화면 전환
+### 7. 에러 처리
+네트워크 에러 타입별 사용자 친화적 메시지 표시
+```dart
+String _getErrorMessage(Object? error) {
+  if (error.toString().contains('SocketException')) {
+    return '인터넷 연결을 확인해주세요.';
+  }
+  // ... 다른 에러 타입 처리
+}
+```
 
 ## API 엔드포인트
 
@@ -149,15 +204,33 @@ Parameters:
   - language: ko-KR
 ```
 
+### 영화 검색
+```
+GET /search/movie
+Parameters:
+  - query: 검색어
+  - api_key: TMDB API 키
+  - language: ko-KR
+```
+
+## 구현 완료된 기능
+
+- [x] 검색 기능 구현 (debounce 적용)
+- [x] enum을 사용한 상태 관리 (SearchMode)
+- [x] Pull-to-refresh 기능
+- [x] 에러 처리 개선 (네트워크 오류별 메시지)
+- [x] 영화 장르별 필터링
+- [x] 즐겨찾기 기능 (로컬 저장)
+- [x] Bottom Navigation
+
 ## 개선 예정 사항
 
-- [ ] 검색 기능 구현 (debounce 적용)
-- [ ] enum을 사용한 상태 관리 개선
-- [ ] Pull-to-refresh 기능
-- [ ] 에러 처리 개선
-- [ ] 로딩 애니메이션 개선
-- [ ] 영화 장르별 필터링
-- [ ] 즐겨찾기 기능
+- [ ] 영화 평점 표시 개선 (별점 UI)
+- [ ] 즐겨찾기 화면 정렬 옵션 (최신순, 평점순)
+- [ ] 영화 트레일러 재생 기능
+- [ ] 스플래시 스크린 추가
+- [ ] 다크모드/라이트모드 토글
+- [ ] 무한 스크롤 페이지네이션
 
 ## 🎨 UI 디자인 출처
 

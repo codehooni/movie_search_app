@@ -46,6 +46,8 @@ dependencies:
 
   # fontAwesome 아이콘
   font_awesome_flutter: ^10.7.0
+
+  # 앱 로컬에 저장
   shared_preferences: ^2.5.3
 
 dev_dependencies:
