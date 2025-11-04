@@ -13,7 +13,7 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
       <td align="center"><b>즐겨찾기</b></td>
     </tr>
     <tr>
-      <td><img width="250" alt="home_screen" src="https://github.com/user-attachments/assets/57540f09-ffa7-453a-b3dc-0cf09db41477" /></td>
+      <td><img width="250" alt="home_screen" src="https://github.com/user-attachments/assets/a4a8003f-3eba-44c7-8ad1-9833254b09fb" /></td>
       <td><img width="250" alt="search_screen" src="https://github.com/user-attachments/assets/8d47b99e-3929-4ba7-87b3-78f5b36d751d" /></td>
       <td><img width="250" alt="detail_screen" src="https://github.com/user-attachments/assets/404d64a6-d120-4bad-9ce6-3c5d330b560e" /></td>
       <td><img width="250" alt="favorites_screen" src="https://github.com/user-attachments/assets/f325f331-3c96-4bb9-a3c8-4514d6cc6490" /></td>
