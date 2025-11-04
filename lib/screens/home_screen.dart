@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context, snapshot) {
                       // loading state: API 호출 중
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        _buildWaitingScreen();
+                        return _buildWaitingScreen();
                       }
 
                       // error state: API 호출 실패
@@ -282,5 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     super.dispose();
     controller.dispose();
+    debouncer.cancel();
   }
 }

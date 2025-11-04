@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:movie_demo/screens/home_screen.dart';
+import 'package:movie_demo/screens/main_screen.dart';
 import 'package:movie_demo/theme/dark_mode.dart';
 
 Future<void> main() async {
@@ -15,6 +15,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(title: 'Movie App', theme: darkMode, home: HomeScreen());
+    return MaterialApp(
+      title: 'Movie App',
+      theme: darkMode,
+      home: MainScreen(),
+    );
   }
 }

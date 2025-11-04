@@ -1,13 +1,25 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
+import 'package:movie_demo/services/favorites_service.dart';
 import 'package:movie_demo/widgets/my_big_movie_card.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class DetailScreen extends StatelessWidget {
+class DetailScreen extends StatefulWidget {
   final Movie movie;
 
   const DetailScreen({super.key, required this.movie});
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+  late Future<bool> futureFunction = FavoritesService.isFavorite(
+    widget.movie.id,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -17,9 +29,9 @@ class DetailScreen extends StatelessWidget {
       body: Stack(
         children: [
           // Background Image
-          if (movie.posterPath != null)
+          if (widget.movie.posterPath != null)
             Image.network(
-              'https://image.tmdb.org/t/p/w500${movie.posterPath}',
+              'https://image.tmdb.org/t/p/w500${widget.movie.posterPath}',
               width: mq.width,
               fit: BoxFit.cover,
             ),
@@ -55,7 +67,7 @@ class DetailScreen extends StatelessWidget {
                     SizedBox(height: mq.height * 0.15),
 
                     // My Movie Card
-                    MyBigMovieCard(movie: movie),
+                    MyBigMovieCard(movie: widget.movie),
 
                     SizedBox(height: mq.height * 0.01),
 
@@ -102,7 +114,44 @@ class DetailScreen extends StatelessWidget {
   Widget _buildButtons(BuildContext context) {
     return Row(
       children: [
-        _buildSmallButton(context, CupertinoIcons.heart),
+        FutureBuilder(
+          future: futureFunction,
+          builder: (context, snapshot) {
+            log(snapshot.toString());
+            final bool isFavorite = snapshot.data ?? false;
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildSmallButton(context, CupertinoIcons.heart);
+            }
+
+            return GestureDetector(
+              onTap: () async {
+                if (isFavorite) {
+                  await FavoritesService.removeFavorite(widget.movie.id);
+                } else {
+                  await FavoritesService.addFavorite(widget.movie);
+                }
+
+                setState(() {
+                  futureFunction = FavoritesService.isFavorite(widget.movie.id);
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      isFavorite ? '즐겨찾기에서 제거되었습니다' : '즐겨찾기에 추가되었습니다',
+                    ),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: _buildSmallButton(
+                context,
+                isFavorite ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
+              ),
+            );
+          },
+        ),
         SizedBox(width: 8.0),
         _buildSmallButton(context, FontAwesomeIcons.download),
         SizedBox(width: 8.0),
@@ -150,7 +199,7 @@ class DetailScreen extends StatelessWidget {
         SizedBox(height: 8.0),
 
         Text(
-          movie.overview.isEmpty ? '줄거리 없음' : movie.overview,
+          widget.movie.overview.isEmpty ? '줄거리 없음' : widget.movie.overview,
           style: TextStyle(fontSize: 15.0),
         ),
       ],
