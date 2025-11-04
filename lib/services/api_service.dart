@@ -5,7 +5,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:movie_demo/models/movie.dart';
 
 class APIService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'https://api.themoviedb.org/3'));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://api.themoviedb.org/3',
+      connectTimeout: Duration(seconds: 10),
+      receiveTimeout: Duration(seconds: 10),
+    ),
+  );
 
   final String? apiKey = dotenv.env['TMDB_API_KEY'];
 
