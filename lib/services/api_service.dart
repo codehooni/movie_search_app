@@ -16,11 +16,11 @@ class APIService {
   final String? apiKey = dotenv.env['TMDB_API_KEY'];
 
   // 인기 영화 불러오기
-  Future<List<Movie>> getPopularMovies() async {
+  Future<List<Movie>> getPopularMovies({int page = 1}) async {
     try {
       final response = await _dio.get(
         '/movie/popular',
-        queryParameters: {'api_key': apiKey, 'language': 'ko-KR'},
+        queryParameters: {'api_key': apiKey, 'language': 'ko-KR', 'page': page},
       );
 
       log('인기 영화 정보를 불러옴', name: 'Movie Api');
@@ -35,7 +35,7 @@ class APIService {
   }
 
   // 검색된 영화 불러오기
-  Future<List<Movie>> getSearchedMovie(String query) async {
+  Future<List<Movie>> getSearchedMovie(String query, {int page = 1}) async {
     try {
       final response = await _dio.get(
         '/search/movie',
@@ -43,6 +43,7 @@ class APIService {
           'query': query,
           'api_key': apiKey,
           'language': 'ko-KR',
+          'page': page,
         },
       );
       log('검색된 영화 정보를 불러옴', name: 'Movie Api');

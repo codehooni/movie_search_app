@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
@@ -22,57 +24,102 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // API Service instance
   final APIService apiService = APIService();
-
   // 검색 입력 필드 컨트롤러
   final controller = TextEditingController();
-
-  // 영화 데이터를 담는 Future
-  late Future<List<Movie>> moviesFuture;
-
   // 검색 입력 디바운서 (500ms 지연)
   final Debouncer debouncer = Debouncer();
-
-  // Current Searching mode State
+  // 현재 상태 (인기, 검색)
   SearchMode searchMode = SearchMode.popular;
+
+  // ScrollController 무한 스크롤
+  final ScrollController _scrollController = ScrollController();
+  List<Movie> movies = [];
+  int currentPage = 1;
+  bool isLoadingMore = false;
+  bool hasMore = true;
 
   @override
   void initState() {
     super.initState();
+    _loadMovies();
+    _scrollController.addListener(_onScroll);
+  }
 
-    // 초기 화면에서 인기 영화 로드
-    moviesFuture = apiService.getPopularMovies();
+  void _onScroll() {
+    if (_scrollController.position.pixels >= // 현재 스크롤 위치
+        _scrollController.position.maxScrollExtent - 200) {
+      // 최대 스크롤 - 200px
+      if (!isLoadingMore && hasMore) {
+        // 로딩 중이 아니고 더 가져올 데이터가 있을 때
+        _loadMore();
+      }
+    }
   }
 
   // 검색어 입력에 따라 영화 데이터 가져오는 메서드
   // 검색어 있을 때: 인기 영화
   // 검색어 없을 때: 검색어로 검색
-  void fetchMovies() {
+  Future<void> _loadMovies() async {
+    setState(() {
+      movies = [];
+      currentPage = 1;
+      hasMore = true;
+    });
+
     try {
       final query = controller.text;
-      setState(() {
+      List<Movie> newMovies;
+
+      setState(() async {
         // 검색어가 없으면 인기 영화 표시
         if (query.isEmpty) {
           searchMode = SearchMode.popular;
-          moviesFuture = apiService.getPopularMovies();
+          newMovies = await apiService.getPopularMovies();
         }
         // 검색어가 있으면 검색 실행
         else {
           searchMode = SearchMode.searching;
-          moviesFuture = apiService.getSearchedMovie(query);
+          newMovies = await apiService.getSearchedMovie(query);
         }
+
+        setState(() {
+          movies = newMovies;
+          hasMore = newMovies.length >= 20;
+        });
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('검색 중 오류가 발생했습니다.'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: '다시 시도',
-            textColor: Colors.white,
-            onPressed: fetchMovies,
-          ),
-        ),
-      );
+      log('검색 중 오류 발생 ');
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (isLoadingMore || !hasMore) return;
+
+    setState(() {
+      isLoadingMore = true;
+    });
+
+    try {
+      final query = controller.text;
+      final nextPage = currentPage + 1;
+      List<Movie> newMovies;
+
+      if (query.isEmpty) {
+        newMovies = await apiService.getPopularMovies(page: nextPage);
+      } else {
+        newMovies = await apiService.getSearchedMovie(query, page: nextPage);
+      }
+
+      setState(() {
+        currentPage = nextPage;
+        movies.addAll(newMovies);
+        hasMore = newMovies.length >= 20;
+        isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingMore = false;
+      });
     }
   }
 
@@ -102,49 +149,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Movie List (FutureBuilder로 비동기 데이터 처리)
                 Expanded(
-                  child: FutureBuilder<List<Movie>>(
-                    future: moviesFuture,
-                    builder: (context, snapshot) {
-                      // loading state: API 호출 중
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return _buildWaitingScreen();
-                      }
+                  child: movies.isEmpty
+                      ? Center(child: CircularProgressIndicator())
+                      :
+                        // Pull-to-Refresh 기능이 있는 영화 리스트
+                        RefreshIndicator(
+                          // 새로고침
+                          onRefresh: _loadMovies,
+                          // 영화 카드 리스트
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            itemCount: movies.length + (isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == movies.length) {
+                                return Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
 
-                      // error state: API 호출 실패
-                      if (snapshot.hasError) {
-                        return _buildErrorScreen(snapshot);
-                      }
-
-                      // data state: API 호출 성공
-                      final movies = snapshot.data;
-
-                      // 빈 데이터 처리 (조건부 렌더링)
-                      if (movies == null || movies.isEmpty) {
-                        return Center(
-                          child: Text(
-                            searchMode == SearchMode.popular
-                                ? '인기 영화 정보를 불러오지 못 했습니다.'
-                                : '검색된 결과가 없습니다.',
+                              return MyMovieCard(movie: movies[index]);
+                            },
                           ),
-                        );
-                      }
-
-                      // Pull-to-Refresh 기능이 있는 영화 리스트
-                      return RefreshIndicator(
-                        // 새로고침
-                        onRefresh: () {
-                          fetchMovies();
-                          return moviesFuture;
-                        },
-                        // 영화 카드 리스트
-                        child: ListView.builder(
-                          itemCount: movies.length,
-                          itemBuilder: (context, index) =>
-                              MyMovieCard(movie: movies[index]),
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
@@ -172,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 setState(() {
                   controller.clear(); // 검색어 지우기
                 });
-                fetchMovies();
+                _loadMovies();
               }
             },
             child: Container(
@@ -191,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
               controller: controller,
               // 입력이 변경될 때마다 호출 (디바운싱 적용)
               onChanged: (_) => debouncer(() {
-                fetchMovies();
+                _loadMovies();
               }),
               decoration: InputDecoration(
                 border: InputBorder.none,
@@ -205,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Search Button
           GestureDetector(
-            onTap: fetchMovies,
+            onTap: _loadMovies,
             child: Container(
               color: Colors.transparent,
               padding: const EdgeInsets.only(left: 8.0),
@@ -252,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: fetchMovies,
+            onPressed: _loadMovies,
             icon: Icon(Icons.refresh),
             label: Text('다시 시도'),
           ),
@@ -283,5 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
     controller.dispose();
     debouncer.cancel();
+    _scrollController.dispose();
   }
 }
