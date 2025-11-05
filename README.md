@@ -27,6 +27,7 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
 - **인기 영화 목록**: TMDB API를 통해 현재 인기 있는 영화 목록 표시
 - **실시간 검색**: Debounce를 적용한 영화 검색 기능 (500ms 지연)
 - **검색 모드 전환**: 인기 영화 ↔ 검색 결과 자동 전환
+- **무한 스크롤**: 스크롤 시 자동으로 다음 페이지 로드 (끝에서 200px 전 미리 로드)
 - **Pull-to-Refresh**: 아래로 당겨서 영화 목록 새로고침
 - **에러 처리**: 네트워크 오류 감지 및 재시도 버튼 제공
 
@@ -207,6 +208,40 @@ String _getErrorMessage(Object? error) {
 }
 ```
 
+### 8. 무한 스크롤 (Infinite Scroll)
+ScrollController를 사용한 페이지네이션 구현
+```dart
+final ScrollController _scrollController = ScrollController();
+List<Movie> movies = [];
+int currentPage = 1;
+bool isLoadingMore = false;
+bool hasMore = true;
+
+void _onScroll() {
+  // 스크롤이 끝에서 200px 전에 도달하면 다음 페이지 로드
+  if (_scrollController.position.pixels >=
+      _scrollController.position.maxScrollExtent - 200) {
+    if (!isLoadingMore && hasMore) {
+      _loadMore();  // 다음 페이지 로드
+    }
+  }
+}
+
+Future<void> _loadMore() async {
+  setState(() => isLoadingMore = true);
+
+  final nextPage = currentPage + 1;
+  final newMovies = await apiService.getPopularMovies(page: nextPage);
+
+  setState(() {
+    currentPage = nextPage;
+    movies.addAll(newMovies);  // 기존 리스트에 추가
+    hasMore = newMovies.length >= 20;  // 더 가져올 데이터가 있는지 확인
+    isLoadingMore = false;
+  });
+}
+```
+
 ## API 엔드포인트
 
 ### 인기 영화 목록
@@ -215,6 +250,7 @@ GET /movie/popular
 Parameters:
   - api_key: TMDB API 키
   - language: ko-KR
+  - page: 페이지 번호 (default: 1)
 ```
 
 ### 영화 검색
@@ -224,6 +260,7 @@ Parameters:
   - query: 검색어
   - api_key: TMDB API 키
   - language: ko-KR
+  - page: 페이지 번호 (default: 1)
 ```
 
 ## 구현 완료된 기능
@@ -235,6 +272,7 @@ Parameters:
 - [x] 영화 장르별 필터링
 - [x] 즐겨찾기 기능 (로컬 저장)
 - [x] Bottom Navigation
+- [x] 무한 스크롤 페이지네이션 (인기 영화 & 검색 결과)
 
 ## 개선 예정 사항
 
@@ -243,7 +281,6 @@ Parameters:
 - [ ] 영화 트레일러 재생 기능
 - [ ] 스플래시 스크린 추가
 - [ ] 다크모드/라이트모드 토글
-- [ ] 무한 스크롤 페이지네이션
 
 ## 🎨 UI 디자인 출처
 
