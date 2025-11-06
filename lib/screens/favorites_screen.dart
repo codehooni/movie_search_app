@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:movie_demo/screens/detail_screen.dart';
+import 'package:movie_demo/services/api_service.dart';
 import 'package:movie_demo/services/favorites_service.dart';
 
+import '../main.dart';
 import '../models/movie.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -42,23 +44,30 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(left: 28.0, right: 28.0, top: 28.0),
+          padding: EdgeInsets.only(
+            left: mq.width * 0.05,
+            right: mq.width * 0.05,
+            top: mq.height * 0.03,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
-              // Favorites
+              // Favorites Text
               Text(
                 'Favorites',
-                style: TextStyle(fontSize: 28.0, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: mq.width * 0.07,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
-              SizedBox(height: 12.0),
+              SizedBox(height: mq.width * 0.015),
 
               // Genre Selector
               _buildGenreList(),
 
-              SizedBox(height: 18.0),
+              SizedBox(height: mq.width * 0.03),
 
               // Movie Posters
               Expanded(
@@ -99,8 +108,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 0.7,
-                          mainAxisSpacing: 16.0,
-                          crossAxisSpacing: 8.0,
+                          mainAxisSpacing: mq.height * 0.02,
+                          crossAxisSpacing: mq.width * 0.02,
                         ),
                         itemCount: filteredMovies.length,
                         itemBuilder: (context, index) {
@@ -126,7 +135,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         children: genreMap.entries
             .map(
               (genre) => Padding(
-                padding: EdgeInsets.only(right: 4.0),
+                padding: EdgeInsets.only(right: mq.width * 0.02),
                 child: _buildGenreContainer(genre.key, genre.value),
               ),
             )
@@ -137,6 +146,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildGenreContainer(int genreId, String genre) {
     final isSelected = selectedGenreId == genreId;
+    final verticalPadding = mq.height * 0.007;
+    final horizontalPadding = mq.width * 0.03;
+    final borderRadius = mq.width * 0.075;
+    final fontSize = mq.width * 0.032;
 
     return GestureDetector(
       onTap: () {
@@ -145,19 +158,25 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
+        padding: EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: horizontalPadding,
+        ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30.0),
+          borderRadius: BorderRadius.circular(borderRadius),
           color: isSelected
-              ? Theme.of(context).colorScheme.secondaryContainer.withAlpha(120)
-              : Theme.of(context).colorScheme.secondaryContainer.withAlpha(20),
+              ? Theme.of(context).colorScheme.primaryContainer.withAlpha(160)
+              : Theme.of(context).colorScheme.primaryContainer.withAlpha(30),
         ),
         child: Center(
           child: Text(
             genre,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.onPrimaryContainer.withAlpha(
+                isSelected ? 255 : 120,
+              ),
               fontWeight: FontWeight.w600,
+              fontSize: fontSize,
             ),
           ),
         ),
@@ -180,9 +199,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       child: Hero(
         tag: 'hero-movie-${movie.id}',
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(mq.width * 0.03),
           child: Image.network(
-            'https://image.tmdb.org/t/p/w500/${movie.posterPath}',
+            '${APIService.baseImageUrl}/${movie.posterPath}',
             fit: BoxFit.cover,
           ),
         ),

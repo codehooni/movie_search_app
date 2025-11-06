@@ -7,6 +7,8 @@ import 'package:movie_demo/services/api_service.dart';
 import 'package:movie_demo/utils/debouncer.dart';
 import 'package:movie_demo/widgets/my_movie_card.dart';
 
+import '../main.dart';
+
 /*
   검색 모드
   - popular: 인기 영화 표시
@@ -53,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
-    textFocus.unfocus();
     if (_scrollController.position.pixels >= // 현재 스크롤 위치
         _scrollController.position.maxScrollExtent - 200) {
       // 최대 스크롤 - 200px
@@ -72,10 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<Movie> newMovies;
 
-      if (page == 1) {
-        movies = [];
-      }
-
       // 인기 모드
       if (movieState == MovieState.popular) {
         newMovies = await apiService.getPopularMovies(page: page);
@@ -89,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         hasMore = newMovies.length >= 20;
         currentPage = page;
+        movies = page == 1 ? [] : movies;
         movies.addAll(newMovies);
       });
     } catch (e) {
@@ -103,13 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadMore() async {
     if (isLoadingMore || !hasMore) return;
 
-    setState(() {
-      isLoadingMore = true;
-    });
-
     try {
-      final nextPage = currentPage + 1;
-      _loadMovies(page: nextPage);
+      setState(() {
+        isLoadingMore = true;
+      });
+
+      final int nextPage = currentPage + 1;
+      await _loadMovies(page: nextPage);
     } catch (e) {
       log('$e', name: 'Load Data in Home Screen');
     } finally {
@@ -128,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: EdgeInsets.symmetric(horizontal: mq.width * 0.05),
             child: Center(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Movie List (FutureBuilder로 비동기 데이터 처리)
                   Expanded(
-                    child: isLoading
+                    child: isLoading && !isLoadingMore
                         // 로딩 중 화면
                         ? _buildWaitingScreen()
                         : movies.isEmpty
@@ -160,18 +158,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         // 기본
                         : RefreshIndicator(
                             onRefresh: _loadMovies,
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              itemCount:
-                                  movies.length + (isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                // 무한 스크롤 중 로딩 중 표시
-                                if (index == movies.length && isLoadingMore) {
-                                  _buildLoadingCare();
-                                }
-
-                                return MyMovieCard(movie: movies[index]);
+                            child: GestureDetector(
+                              onPanDown: (_) {
+                                textFocus.unfocus();
                               },
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount:
+                                    movies.length + (isLoadingMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  // 무한 스크롤 중 로딩 중 표시
+                                  if (index == movies.length) {
+                                    return Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  }
+
+                                  final movie = movies[index];
+                                  return MyMovieCard(movie: movie);
+                                },
+                              ),
                             ),
                           ),
                   ),
@@ -190,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
-        color: Theme.of(context).colorScheme.primary.withAlpha(50),
+        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(50),
       ),
       child: Row(
         children: [
@@ -302,15 +311,6 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.refresh),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingCare() {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: CircularProgressIndicator(),
       ),
     );
   }

@@ -1,11 +1,12 @@
-import 'dart:developer';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
+import 'package:movie_demo/services/api_service.dart';
 import 'package:movie_demo/services/favorites_service.dart';
-import 'package:movie_demo/widgets/my_big_movie_card.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:movie_demo/widgets/my_movie_card.dart';
+
+import '../main.dart';
 
 class DetailScreen extends StatefulWidget {
   final Movie movie;
@@ -17,24 +18,24 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
-  late Future<bool> futureFunction = FavoritesService.isFavorite(
-    widget.movie.id,
-  );
+  late Future<bool> favoritesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    favoritesFuture = FavoritesService.isFavorite(widget.movie.id);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context).size;
+    bool isPosterPath = widget.movie.posterPath != null;
+    final horizontalPadding = mq.width * 0.05;
 
     return Scaffold(
       body: Stack(
         children: [
           // Background Image
-          if (widget.movie.posterPath != null)
-            Image.network(
-              'https://image.tmdb.org/t/p/w500${widget.movie.posterPath}',
-              width: mq.width,
-              fit: BoxFit.cover,
-            ),
+          if (isPosterPath) _buildBackGroundImage(),
 
           // Gradient Overlay
           Positioned.fill(
@@ -59,7 +60,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +68,7 @@ class _DetailScreenState extends State<DetailScreen> {
                     SizedBox(height: mq.height * 0.15),
 
                     // My Movie Card
-                    MyBigMovieCard(movie: widget.movie),
+                    MyMovieCard(movie: widget.movie, isBig: true),
 
                     SizedBox(height: mq.height * 0.01),
 
@@ -87,12 +88,20 @@ class _DetailScreenState extends State<DetailScreen> {
           // Back Button
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.only(top: 16.0, left: 16.0),
+              padding: EdgeInsets.only(top: 16.0, left: horizontalPadding),
               child: _buildBackButton(context),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBackGroundImage() {
+    return Image.network(
+      '${APIService.baseImageUrl}/${widget.movie.posterPath}',
+      width: mq.width,
+      fit: BoxFit.cover,
     );
   }
 
@@ -104,7 +113,7 @@ class _DetailScreenState extends State<DetailScreen> {
         height: 45,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.secondaryContainer.withAlpha(70),
+          color: Theme.of(context).colorScheme.primaryContainer.withAlpha(70),
         ),
         child: Icon(CupertinoIcons.back),
       ),
@@ -115,59 +124,77 @@ class _DetailScreenState extends State<DetailScreen> {
     return Row(
       children: [
         FutureBuilder(
-          future: futureFunction,
+          future: favoritesFuture,
           builder: (context, snapshot) {
-            log(snapshot.toString());
-            final bool isFavorite = snapshot.data ?? false;
-
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildSmallButton(context, CupertinoIcons.heart);
+              return _buildSmallButton(
+                context,
+                Icon(CupertinoIcons.heart, size: 22.0),
+                () {},
+              );
             }
 
-            return GestureDetector(
-              onTap: () async {
-                if (isFavorite) {
-                  await FavoritesService.removeFavorite(widget.movie.id);
-                } else {
-                  await FavoritesService.addFavorite(widget.movie);
-                }
+            final bool isFavorite = snapshot.data ?? false;
 
-                setState(() {
-                  futureFunction = FavoritesService.isFavorite(widget.movie.id);
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      isFavorite ? '즐겨찾기에서 제거되었습니다' : '즐겨찾기에 추가되었습니다',
-                    ),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
-              child: _buildSmallButton(
-                context,
-                isFavorite ? CupertinoIcons.heart_fill : CupertinoIcons.heart,
-              ),
+            return _buildSmallButton(
+              context,
+              isFavorite
+                  ? Icon(
+                      CupertinoIcons.heart_fill,
+                      size: 22.0,
+                      color: Colors.red,
+                    )
+                  : Icon(CupertinoIcons.heart, size: 22),
+              () => _onHeartTap(isFavorite),
             );
           },
         ),
         SizedBox(width: 8.0),
-        _buildSmallButton(context, FontAwesomeIcons.download),
+        _buildSmallButton(
+          context,
+          Icon(FontAwesomeIcons.download, size: 22.0),
+          () {},
+        ),
         SizedBox(width: 8.0),
         Expanded(child: _buildWatchButton(context)),
       ],
     );
   }
 
-  Widget _buildSmallButton(BuildContext context, IconData iconData) {
-    return Container(
-      padding: EdgeInsets.all(10.0),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).colorScheme.secondaryContainer.withAlpha(180),
+  Widget _buildSmallButton(
+    BuildContext context,
+    Icon icon,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(10.0),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.primaryContainer.withAlpha(180),
+        ),
+        child: icon,
       ),
-      child: Icon(iconData, size: 22.0),
+    );
+  }
+
+  void _onHeartTap(bool isFavorite) async {
+    if (isFavorite) {
+      await FavoritesService.removeFavorite(widget.movie.id);
+    } else {
+      await FavoritesService.addFavorite(widget.movie);
+    }
+
+    setState(() {
+      favoritesFuture = FavoritesService.isFavorite(widget.movie.id);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite ? '즐겨찾기에서 제거되었습니다' : '즐겨찾기에 추가되었습니다'),
+        duration: Duration(seconds: 1),
+      ),
     );
   }
 
@@ -176,7 +203,7 @@ class _DetailScreenState extends State<DetailScreen> {
       padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30.0),
-        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(180),
+        color: Theme.of(context).colorScheme.primary.withAlpha(180),
       ),
       child: Center(
         child: Text(
@@ -188,6 +215,8 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   Widget _buildOverView(BuildContext context) {
+    bool isOverview = widget.movie.overview.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -199,7 +228,7 @@ class _DetailScreenState extends State<DetailScreen> {
         SizedBox(height: 8.0),
 
         Text(
-          widget.movie.overview.isEmpty ? '줄거리 없음' : widget.movie.overview,
+          isOverview ? widget.movie.overview : '줄거리 없음',
           style: TextStyle(fontSize: 15.0),
         ),
       ],

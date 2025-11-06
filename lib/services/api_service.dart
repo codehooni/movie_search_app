@@ -15,6 +15,8 @@ class APIService {
 
   final String? apiKey = dotenv.env['TMDB_API_KEY'];
 
+  static String baseImageUrl = 'https://image.tmdb.org/t/p/w500';
+
   // 인기 영화 불러오기
   Future<List<Movie>> getPopularMovies({int page = 1}) async {
     try {

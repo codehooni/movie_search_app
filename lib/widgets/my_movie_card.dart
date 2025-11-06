@@ -2,11 +2,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
 import 'package:movie_demo/screens/detail_screen.dart';
+import 'package:movie_demo/services/api_service.dart';
+
+import '../main.dart';
 
 class MyMovieCard extends StatelessWidget {
   final Movie movie;
+  final bool isBig;
 
-  const MyMovieCard({super.key, required this.movie});
+  const MyMovieCard({super.key, required this.movie, this.isBig = false});
 
   @override
   Widget build(BuildContext context) {
@@ -66,81 +70,116 @@ class MyMovieCard extends StatelessWidget {
   }
 
   Widget _buildImage(BuildContext context) {
+    final width = isBig ? mq.width * 0.27 : mq.width * 0.17;
+    final height = width / 0.7;
+
     return Hero(
       tag: 'hero-movie-${movie.id}',
       child: ClipRRect(
-        borderRadius: BorderRadiusGeometry.circular(12.0),
+        borderRadius: BorderRadiusGeometry.circular(mq.width * 0.03),
         child: movie.posterPath != null
             ? Image.network(
-                'https://image.tmdb.org/t/p/w500${movie.posterPath}',
-                width: 70,
-                height: 100,
+                '${APIService.baseImageUrl}/${movie.posterPath}',
+                width: width,
+                height: height,
                 fit: BoxFit.cover,
               )
-            : Container(
-                width: 70,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                ),
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                ),
-              ),
+            : _buildImageHolder(context),
+      ),
+    );
+  }
+
+  Widget _buildImageHolder(BuildContext context) {
+    final width = isBig ? mq.width * 0.25 : mq.width * 0.17;
+    final height = width / 0.7;
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+      ),
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Theme.of(context).colorScheme.onPrimaryContainer.withAlpha(160),
+        size: width * 0.4,
       ),
     );
   }
 
   Widget _buildType(BuildContext context) {
+    final horizontalPadding = isBig ? mq.width * 0.02 : mq.width * 0.015;
+    final verticalPadding = isBig ? mq.height * 0.005 : mq.height * 0.003;
+    final marginBottom = isBig ? mq.height * 0.02 : mq.height * 0.01;
+    final borderRadius = isBig ? mq.width * 0.03 : mq.width * 0.02;
+    final fontSize = isBig ? mq.width * 0.03 : mq.width * 0.025;
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 2.0, horizontal: 6.0),
-        margin: EdgeInsets.only(bottom: 8.0),
+        padding: EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: horizontalPadding,
+        ),
+        margin: EdgeInsets.only(bottom: marginBottom),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(8.0),
+          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(borderRadius),
         ),
         child: Text(
           'Movie',
-          style: TextStyle(fontSize: 11.0, color: Colors.grey.shade200),
+          style: TextStyle(
+            fontSize: fontSize,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildTitle(BuildContext context) {
-    return Text(
-      movie.title,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.bold,
-        fontSize: 18.0,
+    final fontSize = isBig ? mq.width * 0.06 : mq.width * 0.045;
+    final maxLines = isBig ? 2 : 1;
+    final bottomPadding = isBig ? mq.height * 0.01 : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      child: Text(
+        movie.title,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: fontSize,
+        ),
       ),
     );
   }
 
   Widget _buildDetailText(BuildContext context, String text) {
+    final fontSize = isBig ? mq.width * 0.035 : mq.width * 0.03;
+
     return Text(
-      text ?? '',
+      text,
       style: TextStyle(
-        color: Theme.of(context).colorScheme.onSecondaryContainer,
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
         fontWeight: FontWeight.w400,
-        fontSize: 14.0,
+        fontSize: fontSize,
       ),
     );
   }
 
   Widget _buildDivider(BuildContext context) {
+    final size = isBig ? mq.width * 0.012 : mq.width * 0.01;
+    final margin = isBig ? mq.width * 0.01 : mq.width * 0.008;
+
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 4.0),
-      width: 4,
-      height: 4,
+      margin: EdgeInsets.symmetric(horizontal: margin),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onSecondaryContainer,
+        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
         shape: BoxShape.circle,
       ),
     );
