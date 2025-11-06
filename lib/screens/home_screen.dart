@@ -12,7 +12,7 @@ import 'package:movie_demo/widgets/my_movie_card.dart';
   - popular: 인기 영화 표시
   - searching: 검색 결과 표시
 */
-enum SearchMode { popular, searching }
+enum MovieState { popular, searching }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,17 +24,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // API Service instance
   final APIService apiService = APIService();
+
   // 검색 입력 필드 컨트롤러
   final controller = TextEditingController();
+
+  // 검색 Focus 해제를 위해
+  FocusNode textFocus = FocusNode();
+
   // 검색 입력 디바운서 (500ms 지연)
   final Debouncer debouncer = Debouncer();
+
   // 현재 상태 (인기, 검색)
-  SearchMode searchMode = SearchMode.popular;
+  MovieState movieState = MovieState.popular;
 
   // ScrollController 무한 스크롤
   final ScrollController _scrollController = ScrollController();
   List<Movie> movies = [];
   int currentPage = 1;
+  bool isLoading = false;
   bool isLoadingMore = false;
   bool hasMore = true;
 
@@ -46,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
+    textFocus.unfocus();
     if (_scrollController.position.pixels >= // 현재 스크롤 위치
         _scrollController.position.maxScrollExtent - 200) {
       // 최대 스크롤 - 200px
@@ -56,39 +64,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // 검색어 입력에 따라 영화 데이터 가져오는 메서드
-  // 검색어 있을 때: 인기 영화
-  // 검색어 없을 때: 검색어로 검색
-  Future<void> _loadMovies() async {
-    setState(() {
-      movies = [];
-      currentPage = 1;
-      hasMore = true;
-    });
-
+  Future<void> _loadMovies({int page = 1}) async {
     try {
-      final query = controller.text;
+      setState(() {
+        isLoading = true;
+      });
+
       List<Movie> newMovies;
 
-      setState(() async {
-        // 검색어가 없으면 인기 영화 표시
-        if (query.isEmpty) {
-          searchMode = SearchMode.popular;
-          newMovies = await apiService.getPopularMovies();
-        }
-        // 검색어가 있으면 검색 실행
-        else {
-          searchMode = SearchMode.searching;
-          newMovies = await apiService.getSearchedMovie(query);
-        }
+      if (page == 1) {
+        movies = [];
+      }
 
-        setState(() {
-          movies = newMovies;
-          hasMore = newMovies.length >= 20;
-        });
+      // 인기 모드
+      if (movieState == MovieState.popular) {
+        newMovies = await apiService.getPopularMovies(page: page);
+      }
+      // 검색 모드
+      else {
+        final query = controller.text;
+        newMovies = await apiService.getSearchedMovie(query, page: page);
+      }
+
+      setState(() {
+        hasMore = newMovies.length >= 20;
+        currentPage = page;
+        movies.addAll(newMovies);
       });
     } catch (e) {
-      log('검색 중 오류 발생 ');
+      log('$e', name: 'Load Data in Home Screen');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -100,23 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final query = controller.text;
       final nextPage = currentPage + 1;
-      List<Movie> newMovies;
-
-      if (query.isEmpty) {
-        newMovies = await apiService.getPopularMovies(page: nextPage);
-      } else {
-        newMovies = await apiService.getSearchedMovie(query, page: nextPage);
-      }
-
-      setState(() {
-        currentPage = nextPage;
-        movies.addAll(newMovies);
-        hasMore = newMovies.length >= 20;
-        isLoadingMore = false;
-      });
+      _loadMovies(page: nextPage);
     } catch (e) {
+      log('$e', name: 'Load Data in Home Screen');
+    } finally {
       setState(() {
         isLoadingMore = false;
       });
@@ -125,57 +121,62 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Search Bar
-                _buildSearchBar(),
+    return GestureDetector(
+      onTap: textFocus.unfocus,
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Search Bar
+                  _buildSearchBar(),
 
-                SizedBox(height: 24.0),
+                  SizedBox(height: 24.0),
 
-                // Section Title (조건부 렌더링)
-                Text(
-                  searchMode == SearchMode.popular ? '인기 영화' : '검색 결과',
-                  style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-                ),
+                  // Section Title (조건부 렌더링)
+                  Text(
+                    movieState == MovieState.popular ? '인기 영화' : '검색 결과',
+                    style: TextStyle(
+                      fontSize: 20.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
-                SizedBox(height: 4.0),
+                  SizedBox(height: 4.0),
 
-                // Movie List (FutureBuilder로 비동기 데이터 처리)
-                Expanded(
-                  child: movies.isEmpty
-                      ? Center(child: CircularProgressIndicator())
-                      :
-                        // Pull-to-Refresh 기능이 있는 영화 리스트
-                        RefreshIndicator(
-                          // 새로고침
-                          onRefresh: _loadMovies,
-                          // 영화 카드 리스트
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            itemCount: movies.length + (isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == movies.length) {
-                                return Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
+                  // Movie List (FutureBuilder로 비동기 데이터 처리)
+                  Expanded(
+                    child: isLoading
+                        // 로딩 중 화면
+                        ? _buildWaitingScreen()
+                        : movies.isEmpty
+                        // 데이터가 없을 때
+                        ? _buildEmptyScreen()
+                        // 기본
+                        : RefreshIndicator(
+                            onRefresh: _loadMovies,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              itemCount:
+                                  movies.length + (isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                // 무한 스크롤 중 로딩 중 표시
+                                if (index == movies.length && isLoadingMore) {
+                                  _buildLoadingCare();
+                                }
 
-                              return MyMovieCard(movie: movies[index]);
-                            },
+                                return MyMovieCard(movie: movies[index]);
+                              },
+                            ),
                           ),
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -195,15 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Back Button (검색 취소 기능)
           GestureDetector(
-            onTap: () {
-              // 검색어가 있을 때만 동작
-              if (controller.text.isNotEmpty) {
-                setState(() {
-                  controller.clear(); // 검색어 지우기
-                });
-                _loadMovies();
-              }
-            },
+            onTap: _onBackButton,
             child: Container(
               color: Colors.transparent,
               padding: const EdgeInsets.only(right: 8.0),
@@ -218,8 +211,22 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: textFocus,
               // 입력이 변경될 때마다 호출 (디바운싱 적용)
               onChanged: (_) => debouncer(() {
+                final query = controller.text;
+
+                // 쿼리가 비어 있으면 인기 영화 모드로 전환
+                if (query.isEmpty) {
+                  movieState = MovieState.popular;
+                  textFocus.unfocus();
+                }
+                // 검색 모드 이면서 인기 영화 상태 일때 서치 상태로 변환
+                else if (movieState != MovieState.searching) {
+                  movieState = MovieState.searching;
+                }
+                // 검색 모드 이면서 이미 서치 상태일 때 넘어가기
+
                 _loadMovies();
               }),
               decoration: InputDecoration(
@@ -250,6 +257,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _onBackButton() {
+    // 검색어가 있을 때만 동작
+    if (controller.text.isNotEmpty) {
+      setState(() {
+        textFocus.unfocus();
+        controller.clear(); // 검색어 지우기
+      });
+      _loadMovies();
+    }
+  }
+
   Widget _buildWaitingScreen() {
     return Center(
       child: Column(
@@ -258,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
           CircularProgressIndicator(),
           SizedBox(height: 16),
           Text(
-            searchMode == SearchMode.popular ? '인기 영화를 불러오는 중...' : '검색 중...',
+            movieState == MovieState.popular ? '인기 영화를 불러오는 중...' : '검색 중...',
             style: TextStyle(color: Colors.grey),
           ),
         ],
@@ -266,45 +284,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // When there is an error, Show Refresh Button
-  Widget _buildErrorScreen(AsyncSnapshot snapshot) {
+  Widget _buildEmptyScreen() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 60, color: Colors.red),
-          SizedBox(height: 16),
           Text(
-            _getErrorMessage(snapshot.error),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16),
+            movieState == MovieState.popular
+                ? '인기 영화 목록을 불러오지 못 했습니다.'
+                : '검색 목록이 없습니다.',
+            style: TextStyle(color: Colors.grey),
           ),
           SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _loadMovies,
-            icon: Icon(Icons.refresh),
             label: Text('다시 시도'),
+            icon: Icon(Icons.refresh),
           ),
         ],
       ),
     );
   }
 
-  // 에러 타입별 사용자 친화적 메시지 반환
-  String _getErrorMessage(Object? error) {
-    if (error.toString().contains('SocketException')) {
-      return '인터넷 연결을 확인해주세요.';
-    } else if (error.toString().contains('TimeoutException')) {
-      return '요청 시간이 초과되었습니다.\n잠시 후 다시 시도해주세요.';
-    } else if (error.toString().contains('401')) {
-      return 'API 인증에 실패했습니다.';
-    } else if (error.toString().contains('404')) {
-      return '요청한 정보를 찾을 수 없습니다.';
-    } else if (error.toString().contains('500')) {
-      return '서버 오류가 발생했습니다.';
-    } else {
-      return '오류가 발생했습니다.\n${error.toString()}';
-    }
+  Widget _buildLoadingCare() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 
   @override
@@ -313,5 +321,6 @@ class _HomeScreenState extends State<HomeScreen> {
     controller.dispose();
     debouncer.cancel();
     _scrollController.dispose();
+    textFocus.dispose();
   }
 }
