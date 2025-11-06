@@ -1,326 +1,230 @@
-import 'dart:developer';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:movie_demo/models/movie.dart';
+import 'package:movie_demo/screens/detail_screen.dart';
 import 'package:movie_demo/services/api_service.dart';
-import 'package:movie_demo/utils/debouncer.dart';
 import 'package:movie_demo/widgets/my_movie_card.dart';
 
 import '../main.dart';
 
-/*
-  검색 모드
-  - popular: 인기 영화 표시
-  - searching: 검색 결과 표시
-*/
-enum MovieState { popular, searching }
-
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback onTap;
+
+  const HomeScreen({super.key, required this.onTap});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // API Service instance
   final APIService apiService = APIService();
-
-  // 검색 입력 필드 컨트롤러
-  final controller = TextEditingController();
-
-  // 검색 Focus 해제를 위해
-  FocusNode textFocus = FocusNode();
-
-  // 검색 입력 디바운서 (500ms 지연)
-  final Debouncer debouncer = Debouncer();
-
-  // 현재 상태 (인기, 검색)
-  MovieState movieState = MovieState.popular;
-
-  // ScrollController 무한 스크롤
-  final ScrollController _scrollController = ScrollController();
   List<Movie> movies = [];
-  int currentPage = 1;
-  bool isLoading = false;
-  bool isLoadingMore = false;
-  bool hasMore = true;
+  int selectedMovieIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadMovies();
-    _scrollController.addListener(_onScroll);
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >= // 현재 스크롤 위치
-        _scrollController.position.maxScrollExtent - 200) {
-      // 최대 스크롤 - 200px
-      if (!isLoadingMore && hasMore) {
-        // 로딩 중이 아니고 더 가져올 데이터가 있을 때
-        _loadMore();
-      }
-    }
-  }
+  Future<void> _loadMovies() async {
+    movies = await apiService.getPopularMovies();
 
-  Future<void> _loadMovies({int page = 1}) async {
-    try {
-      setState(() {
-        isLoading = true;
-      });
-
-      List<Movie> newMovies;
-
-      // 인기 모드
-      if (movieState == MovieState.popular) {
-        newMovies = await apiService.getPopularMovies(page: page);
-      }
-      // 검색 모드
-      else {
-        final query = controller.text;
-        newMovies = await apiService.getSearchedMovie(query, page: page);
-      }
-
-      setState(() {
-        hasMore = newMovies.length >= 20;
-        currentPage = page;
-        movies = page == 1 ? [] : movies;
-        movies.addAll(newMovies);
-      });
-    } catch (e) {
-      log('$e', name: 'Load Data in Home Screen');
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadMore() async {
-    if (isLoadingMore || !hasMore) return;
-
-    try {
-      setState(() {
-        isLoadingMore = true;
-      });
-
-      final int nextPage = currentPage + 1;
-      await _loadMovies(page: nextPage);
-    } catch (e) {
-      log('$e', name: 'Load Data in Home Screen');
-    } finally {
-      setState(() {
-        isLoadingMore = false;
-      });
-    }
+    setState(() {
+      movies;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: textFocus.unfocus,
-      behavior: HitTestBehavior.opaque,
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: mq.width * 0.05),
-            child: Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search Bar
-                  _buildSearchBar(),
-
-                  SizedBox(height: 24.0),
-
-                  // Section Title (조건부 렌더링)
-                  Text(
-                    movieState == MovieState.popular ? '인기 영화' : '검색 결과',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return Scaffold(
+      body: Stack(
+        children: [
+          _buildBackground(),
+          _buildWelcomeCard(),
+          if (movies.isNotEmpty)
+            SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: AlignmentGeometry.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(context).colorScheme.surface,
+                    ],
+                    //  0 ~  20% : 포스터
+                    // 20 ~  40% : 그라데이션
+                    // 40 ~ 100% : 배경
+                    stops: [0.3, 0.6, 1.0],
                   ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.only(top: mq.height * 0.35),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Card
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: mq.width * 0.05,
+                          ),
+                          child: MyMovieCard(
+                            movie: movies[selectedMovieIndex],
+                            isBig: true,
+                            isHome: true,
+                          ),
+                        ),
 
-                  SizedBox(height: 4.0),
+                        SizedBox(height: mq.height * 0.02),
 
-                  // Movie List (FutureBuilder로 비동기 데이터 처리)
-                  Expanded(
-                    child: isLoading && !isLoadingMore
-                        // 로딩 중 화면
-                        ? _buildWaitingScreen()
-                        : movies.isEmpty
-                        // 데이터가 없을 때
-                        ? _buildEmptyScreen()
-                        // 기본
-                        : RefreshIndicator(
-                            onRefresh: _loadMovies,
-                            child: GestureDetector(
-                              onPanDown: (_) {
-                                textFocus.unfocus();
-                              },
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                itemCount:
-                                    movies.length + (isLoadingMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  // 무한 스크롤 중 로딩 중 표시
-                                  if (index == movies.length) {
-                                    return Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(16.0),
-                                        child: CircularProgressIndicator(),
+                        Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: mq.width * 0.05,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '인기 영화',
+                                    style: TextStyle(
+                                      fontSize: mq.width * 0.05,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: widget.onTap,
+                                    child: Text(
+                                      '더보기',
+                                      style: TextStyle(
+                                        fontSize: mq.width * 0.035,
                                       ),
-                                    );
-                                  }
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
 
-                                  final movie = movies[index];
-                                  return MyMovieCard(movie: movie);
+                            SizedBox(height: mq.height * 0.005),
+
+                            SizedBox(
+                              height: mq.height * 0.25,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: movies.length,
+                                itemBuilder: (context, index) {
+                                  // if (selectedMovieIndex == index) {
+                                  //   return SizedBox();
+                                  // }
+                                  return _buildMoviePoster(index);
                                 },
                               ),
                             ),
-                          ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoviePoster(int index) {
+    final movie = movies[index];
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: index == 0 ? mq.width * 0.05 : 0,
+        right: mq.width * 0.03,
+      ),
+      child: GestureDetector(
+        onTap: () {
+          if (selectedMovieIndex == index) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DetailScreen(movie: movie)),
+            );
+          }
+          setState(() {
+            selectedMovieIndex = index;
+          });
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(mq.width * 0.03),
+          child: Image.network(
+            '${APIService.baseImageUrl}/${movie.posterPath}',
+            width: mq.width * 0.35,
+            fit: BoxFit.cover,
           ),
         ),
       ),
     );
   }
 
-  // Build Search bar Widget
-  Widget _buildSearchBar() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12.0),
-        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(50),
+  Widget _buildBackground() {
+    if (movies.isEmpty) {
+      return Center(child: CircularProgressIndicator());
+    }
+    return Image.network(
+      '${APIService.baseImageUrl}/${movies[selectedMovieIndex].posterPath}',
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    final verticalPadding = mq.height * 0.075;
+    final horizontalPadding = mq.width * 0.05;
+    final fontSize = mq.width * 0.038;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
       ),
       child: Row(
         children: [
-          // Back Button (검색 취소 기능)
-          GestureDetector(
-            onTap: _onBackButton,
-            child: Container(
-              color: Colors.transparent,
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Icon(
-                CupertinoIcons.back,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-          ),
-
-          // TextField for Searching
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: textFocus,
-              // 입력이 변경될 때마다 호출 (디바운싱 적용)
-              onChanged: (_) => debouncer(() {
-                final query = controller.text;
-
-                // 쿼리가 비어 있으면 인기 영화 모드로 전환
-                if (query.isEmpty) {
-                  movieState = MovieState.popular;
-                  textFocus.unfocus();
-                }
-                // 검색 모드 이면서 인기 영화 상태 일때 서치 상태로 변환
-                else if (movieState != MovieState.searching) {
-                  movieState = MovieState.searching;
-                }
-                // 검색 모드 이면서 이미 서치 상태일 때 넘어가기
-
-                _loadMovies();
-              }),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Search',
-                hintStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-          ),
-
-          // Search Button
-          GestureDetector(
-            onTap: _loadMovies,
-            child: Container(
-              color: Colors.transparent,
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Icon(
-                Icons.search,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                size: 26.0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _onBackButton() {
-    // 검색어가 있을 때만 동작
-    if (controller.text.isNotEmpty) {
-      setState(() {
-        textFocus.unfocus();
-        controller.clear(); // 검색어 지우기
-      });
-      _loadMovies();
-    }
-  }
-
-  Widget _buildWaitingScreen() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
           Text(
-            movieState == MovieState.popular ? '인기 영화를 불러오는 중...' : '검색 중...',
-            style: TextStyle(color: Colors.grey),
+            'Hi, Ceyhun👋',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+          ),
+
+          Spacer(),
+
+          Container(
+            width: mq.width * 0.1,
+            padding: EdgeInsets.all(mq.width * 0.02),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withAlpha(80),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.notifications_none_rounded),
+          ),
+
+          SizedBox(width: mq.width * 0.02),
+
+          Container(
+            width: mq.width * 0.1,
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withAlpha(80),
+              shape: BoxShape.circle,
+            ),
+            child: Image.asset('assets/image/image.png', fit: BoxFit.cover),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildEmptyScreen() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            movieState == MovieState.popular
-                ? '인기 영화 목록을 불러오지 못 했습니다.'
-                : '검색 목록이 없습니다.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _loadMovies,
-            label: Text('다시 시도'),
-            icon: Icon(Icons.refresh),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    controller.dispose();
-    debouncer.cancel();
-    _scrollController.dispose();
-    textFocus.dispose();
   }
 }

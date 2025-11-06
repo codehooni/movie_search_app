@@ -9,8 +9,14 @@ import '../main.dart';
 class MyMovieCard extends StatelessWidget {
   final Movie movie;
   final bool isBig;
+  final bool isHome;
 
-  const MyMovieCard({super.key, required this.movie, this.isBig = false});
+  const MyMovieCard({
+    super.key,
+    required this.movie,
+    this.isBig = false,
+    this.isHome = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +32,11 @@ class MyMovieCard extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 12.0),
         child: Row(
           children: [
-            // Image
-            _buildImage(context),
+            if (!isHome)
+              // Image
+              _buildImage(context),
 
-            SizedBox(width: 16.0),
+            if (!isHome) SizedBox(width: 16.0),
 
             // Information
             Expanded(
@@ -63,6 +70,8 @@ class MyMovieCard extends StatelessWidget {
                 ],
               ),
             ),
+
+            if (isHome) _buildPlayButton(context),
           ],
         ),
       ),
@@ -182,6 +191,17 @@ class MyMovieCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
         shape: BoxShape.circle,
       ),
+    );
+  }
+
+  Widget _buildPlayButton(BuildContext context) {
+    return Container(
+      padding: EdgeInsetsGeometry.all(mq.width * 0.02),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.primaryContainer.withAlpha(40),
+      ),
+      child: Icon(Icons.play_arrow, size: mq.width * 0.09),
     );
   }
 }
