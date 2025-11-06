@@ -8,15 +8,15 @@ Flutter를 사용하여 TMDB(The Movie Database) API로 영화 정보를 가져�
   <table>
     <tr>
       <td align="center"><b>홈 화면</b></td>
+      <td align="center"><b>즐겨찾기</b></td>
       <td align="center"><b>검색 화면</b></td>
       <td align="center"><b>영화 상세 페이지</b></td>
-      <td align="center"><b>즐겨찾기</b></td>
     </tr>
     <tr>
       <td><img width="250" alt="home_screen" src="https://github.com/user-attachments/assets/6e206117-467a-4397-b7b2-c34459005ed1" /></td>
-      <td><img width="250" alt="search_screen" src="https://github.com/user-attachments/assets/0f14a87c-eb78-4b68-bdb6-7fce462b687e" /></td>
-      <td><img width="250" alt="detail_screen" src="https://github.com/user-attachments/assets/23398d4f-93b4-49a1-abe5-0f714e44902e" /></td>
       <td><img width="250" alt="favorites_screen" src="https://github.com/user-attachments/assets/845508b6-9fd2-4f95-a741-310901f408f8" /></td>
+      <td><img width="250" alt="search_screen" src="https://github.com/user-attachments/assets/0f14a87c-eb78-4b68-bdb6-7fce462b687e" /></td>
+      <td><img width="250" alt="detail_screen" src="https://github.com/user-attachments/assets/76ce4cb7-9b9b-4a5f-8ae8-e27fc26070a7" /></td>
     </tr>
   </table>
 </div>
